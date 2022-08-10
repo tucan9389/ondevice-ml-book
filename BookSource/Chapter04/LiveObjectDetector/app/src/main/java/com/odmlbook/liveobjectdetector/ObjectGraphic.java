@@ -26,7 +26,7 @@ import com.google.mlkit.vision.objects.DetectedObject;
 import com.google.mlkit.vision.objects.DetectedObject.Label;
 import java.util.Locale;
 
-/** Draw the detected object info in preview. */
+/** 프리뷰에 감지된 오브젝트 정보를 그리기 */
 public class ObjectGraphic extends Graphic {
 
     private static final float TEXT_SIZE = 54.0f;
@@ -64,30 +64,30 @@ public class ObjectGraphic extends Graphic {
         labelPaints = new Paint[numColors];
         for (int i = 0; i < numColors; i++) {
             textPaints[i] = new Paint();
-            textPaints[i].setColor(COLORS[i][0] /* text color */);
+            textPaints[i].setColor(COLORS[i][0] /* 텍스트 색상 */);
             textPaints[i].setTextSize(TEXT_SIZE);
 
             boxPaints[i] = new Paint();
-            boxPaints[i].setColor(COLORS[i][1] /* background color */);
+            boxPaints[i].setColor(COLORS[i][1] /* 배경 색상 */);
             boxPaints[i].setStyle(Paint.Style.STROKE);
             boxPaints[i].setStrokeWidth(STROKE_WIDTH);
 
             labelPaints[i] = new Paint();
-            labelPaints[i].setColor(COLORS[i][1] /* background color */);
+            labelPaints[i].setColor(COLORS[i][1] /* 배경 색상 */);
             labelPaints[i].setStyle(Paint.Style.FILL);
         }
     }
 
     @Override
     public void draw(Canvas canvas) {
-        // Decide color based on object tracking ID
+        // 오브젝트 트래킹 ID에 따라 색상 정하기
         int colorID =
                 object.getTrackingId() == null ? 0 : Math.abs(object.getTrackingId() % NUM_COLORS);
         float textWidth = textPaints[colorID].measureText("Tracking ID: " + object.getTrackingId());
         float lineHeight = TEXT_SIZE + STROKE_WIDTH;
         float yLabelOffset = -lineHeight;
 
-        // Calculate width and height of label box
+        // 레이블 박스의 가로 세로 길이 계산하기
         for (Label label : object.getLabels()) {
             textWidth = Math.max(textWidth, textPaints[colorID].measureText(label.getText()));
             textWidth =
@@ -99,9 +99,9 @@ public class ObjectGraphic extends Graphic {
             yLabelOffset -= 2 * lineHeight;
         }
 
-        // Draws the bounding box.
+        // 바운딩박스 그리기
         RectF rect = new RectF(object.getBoundingBox());
-        // If the image is flipped, the left will be translated to right, and the right to left.
+        // 이미지가 뒤집혔다면 왼쪽을 오른쪽으로, 오른쪽을 왼쪽으로 변환하기
         float x0 = translateX(rect.left);
         float x1 = translateX(rect.right);
         rect.left = Math.min(x0, x1);
@@ -110,7 +110,7 @@ public class ObjectGraphic extends Graphic {
         rect.bottom = translateY(rect.bottom);
         canvas.drawRect(rect, boxPaints[colorID]);
 
-        // Draws other object info.
+        // 다른 오브젝트 정보도 그리기
         canvas.drawRect(
                 rect.left - STROKE_WIDTH,
                 rect.top + yLabelOffset,

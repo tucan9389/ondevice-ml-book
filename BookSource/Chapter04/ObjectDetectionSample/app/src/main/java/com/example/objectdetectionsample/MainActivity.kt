@@ -22,9 +22,9 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
         //val croppedImage: ImageView = findViewById(R.id.croppedImage)
         val img: ImageView = findViewById(R.id.imageToLabel)
-        // assets folder image file name with extension
+        // assets 폴더의 이미지 파일과 확장자
         val fileName = "bird.jpg"
-        // get bitmap from assets folder
+        // assets 폴더에서 비트맵 이미지 가져오기
         val bitmap: Bitmap? = assetsToBitmap(fileName)
         bitmap?.apply {
             img.setImageBitmap(this)
@@ -46,7 +46,7 @@ class MainActivity : AppCompatActivity() {
             txtOutput.text = ""
             objectDetector.process(image)
                     .addOnSuccessListener { detectedObjects ->
-                        // Task completed successfully
+                        // 성공적으로 테스크가 끝났을 때 처리
                         getLabels(bitmap, detectedObjects, txtOutput)
                         bitmap?.apply{
                             img.setImageBitmap(drawWithRectangle(detectedObjects))
@@ -54,7 +54,7 @@ class MainActivity : AppCompatActivity() {
 
                     }
                     .addOnFailureListener { e ->
-                        // Task failed with an exception
+                        // 테스크가 실패했을 때의 예외처리
                         // ...
                     }
 
@@ -81,7 +81,7 @@ fun getLabels(bitmap: Bitmap, objects: List<DetectedObject>, txtOutput: TextView
         var image = InputImage.fromBitmap(croppedBitmap!!, 0)
         labeler.process(image)
             .addOnSuccessListener { labels ->
-                // Task completed successfully
+                // 성공적으로 테스크가 끝났을 때 처리
                 var labelText = ""
                 if(labels.count()>0) {
                     labelText = txtOutput.text.toString()
@@ -97,7 +97,7 @@ fun getLabels(bitmap: Bitmap, objects: List<DetectedObject>, txtOutput: TextView
     }
 }
 
-// extension function to get bitmap from assets
+// assets 폴더에서 비트맵 이미지를 가져오기 위한 핼퍼 함수
 fun Context.assetsToBitmap(fileName: String): Bitmap?{
     return try {
         with(assets.open(fileName)){
@@ -119,7 +119,7 @@ fun Bitmap.drawWithRectangle(objects: List<DetectedObject>):Bitmap?{
             textSize = 32.0f
             strokeWidth = 4.0f
             isAntiAlias = true
-            // draw rectangle on canvas
+            // 캔버스에 사각형 그리기
             canvas.drawRect(
                     bounds,
                     this

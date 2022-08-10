@@ -38,7 +38,7 @@ public class ObjectAnalyzer(graphicOverlay: GraphicOverlay) : ImageAnalysis.Anal
         )
         objectDetector.process(frame)
                 .addOnSuccessListener { detectedObjects ->
-                    // Task completed successfully
+                    // 테스크가 성공적으로 끝났을 때 처리
                     overlay.clear()
                     for (detectedObject in detectedObjects){
                         val objGraphic = ObjectGraphic(this.overlay, detectedObject)
@@ -49,7 +49,7 @@ public class ObjectAnalyzer(graphicOverlay: GraphicOverlay) : ImageAnalysis.Anal
                 }
 
                 .addOnFailureListener { e ->
-                    // Task failed with an exception
+                    // 테스크가 실패했을 때 예외처리
                     // ...
                 }
                 .addOnCompleteListener {
