@@ -34,7 +34,7 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                     .addOnFailureListener {
-                        // Task failed with an exception
+                        // 테스크 실패시 예외처리
                         // ...
                     }
         }

@@ -57,7 +57,8 @@ class MainActivity : AppCompatActivity() {
     fun initializeRecognition(){
         val modelIdentifier: DigitalInkRecognitionModelIdentifier? =
             DigitalInkRecognitionModelIdentifier.fromLanguageTag("en-US")
-        // Use "zh-Hani-CN" for Chinese!
+        // 중국어는 "zh-Hani-CN"를 사용하면 되는데, 한국어는 22.09.13 기준으로 지원하지 않습니다.
+        // https://developers.google.com/android/reference/com/google/mlkit/vision/digitalink/DigitalInkRecognitionModelIdentifier#public-static-digitalinkrecognitionmodelidentifier-fromlanguagetag-string-languagetag
         model = DigitalInkRecognitionModel.builder(modelIdentifier!!).build()
         remoteModelManager.download(model!!, DownloadConditions.Builder().build()).addOnSuccessListener {
             Log.i("InkSample", "Model Downloaded")

@@ -11,7 +11,7 @@ import com.google.mlkit.vision.digitalink.Ink
 import com.odmlbook.digitalinktest.R
 
 class CustomDrawingSurface @JvmOverloads constructor(context: Context?, attributeSet: AttributeSet?=null): View(context, attributeSet) {
-    // Holds the path you are currently drawing.
+    // 그릴 패스를 담고 있습니다
     private var path = Path()
     private val drawColor = Color.BLACK
     private val backgroundColor = Color.MAGENTA
@@ -24,23 +24,23 @@ class CustomDrawingSurface @JvmOverloads constructor(context: Context?, attribut
 
 
 
-    // Set up the paint with which to draw.
+    // 어디에 그릴지 paint를 설정합니다
     private val paint = Paint().apply {
         color = drawColor
-        // Smooths out edges of what is drawn without affecting shape.
+        // 그려지는 모서리를 부드럽게 만듭니다
         isAntiAlias = true
-        // Dithering affects how colors with higher-precision than the device are down-sampled.
+        // 디더링(Dithering)은 기기보다 높은 정밀도의 색상을 다운 샘플링하는 방법에 영향을 줍니다
         isDither = true
-        style = Paint.Style.STROKE // default: FILL
-        strokeJoin = Paint.Join.ROUND // default: MITER
-        strokeCap = Paint.Cap.ROUND // default: BUTT
-        strokeWidth = 4f // default: Hairline-width (really thin)
+        style = Paint.Style.STROKE // 기본값: FILL
+        strokeJoin = Paint.Join.ROUND // 기본값: MITER
+        strokeCap = Paint.Cap.ROUND // 기본값: BUTT
+        strokeWidth = 4f // 기본값: Hairline-width (아주 얇음)
     }
 
     /**
-     * Don't draw every single pixel.
-     * If the finger has has moved less than this distance, don't draw. scaledTouchSlop, returns
-     * the distance in pixels a touch can wander before we think the user is scrolling.
+     * 모든 픽셀을 하나하나 그리지 않습니다.
+     * 이 거리보다 작게 손가락을 움직이면 그리지 않습니다. scaledTouchSlop는 사용자가 스크롤하기 전에 터치가 이동할 수 있는
+     * 픽셀 거리를 번환합니다.
      */
     private val touchTolerance = ViewConfiguration.get(context).scaledTouchSlop
 
@@ -51,9 +51,8 @@ class CustomDrawingSurface @JvmOverloads constructor(context: Context?, attribut
     private var motionTouchEventY = 0f
     private var motionTouchEventT = 0L
     /**
-     * Called whenever the view changes size.
-     * Since the view starts out with no size, this is also called after
-     * the view has been inflated and has a valid size.
+     * 뷰 크기가 바뀔때마다 호출됩니다.
+     * 뷰는 처음 크기가 없이 시작하기 떄문에 뷰가 생성되어 유효한 크기로 만들어지고 나도 호출됩니다.
      */
     override fun onSizeChanged(width: Int, height: Int, oldWidth: Int, oldHeight: Int) {
         super.onSizeChanged(width, height, oldWidth, oldHeight)
@@ -70,8 +69,8 @@ class CustomDrawingSurface @JvmOverloads constructor(context: Context?, attribut
     }
 
     /**
-     * No need to call and implement MyCanvasView#performClick, because MyCanvasView custom view
-     * does not handle click actions.
+     * MyCanvasView 커스텀 뷰가 클릭 엑션을 처리하지 않으므로 MyCanvasView#performClick를 호출하고 구현할 필요는
+     * 없습니다.
      */
     override fun onTouchEvent(event: MotionEvent): Boolean {
         motionTouchEventX = event.x
@@ -87,17 +86,15 @@ class CustomDrawingSurface @JvmOverloads constructor(context: Context?, attribut
     }
 
     /**
-     * The following methods factor out what happens for different touch events,
-     * as determined by the onTouchEvent() when statement.
-     * This keeps the when conditional block
-     * concise and makes it easier to change what happens for each event.
-     * No need to call invalidate because we are not drawing anything.
+     * 아래 메소드는 onTouchEvent()에 정의된 대로 각기 다른 터치 이벤트들이 발생할 수 있게 설정합니다.
+     * 이 방법은 when 조건 블락을 간결하게 유지하면서 동시에 각 이벤트에 발생하는 작업을 쉽게 바꿀 수 있습니다.
+     * 아무것도 그리지 않을것이므로 invalidate를 호출할 필요는 없습니다.
      */
     private fun touchStart() {
-        // For drawing on the screen
+        // 화면 위에 그리기 위한 용도
         path.reset()
         path.moveTo(motionTouchEventX, motionTouchEventY)
-        // For initializing the stroke that will be used to capture the ink for ML Kit
+        // ML Kit의 ink를 잡아두는데 사용될 stroke을 초기화하기 위한 용도
         currentX = motionTouchEventX
         currentY = motionTouchEventY
         strokeBuilder = Ink.Stroke.builder()
@@ -108,23 +105,24 @@ class CustomDrawingSurface @JvmOverloads constructor(context: Context?, attribut
         val dx = Math.abs(motionTouchEventX - currentX)
         val dy = Math.abs(motionTouchEventY - currentY)
         if (dx >= touchTolerance || dy >= touchTolerance) {
-            // QuadTo() adds a quadratic bezier from the last point,
-            // approaching control point (x1,y1), and ending at (x2,y2).
+            // QuadTo()는 마지막 점으로부터 이차 베이저(quadratic bezier)를 추가합니다.
+            // (x1,y1) 조작점(control point)에 접근하고, (x2,y2) 점에서 끝나도록 합니다.
+            // quadratic bezier: https://en.wikipedia.org/wiki/B%C3%A9zier_curve#Quadratic_B%C3%A9zier_curves
             path.quadTo(currentX, currentY, (motionTouchEventX + currentX) / 2, (motionTouchEventY + currentY) / 2)
             currentX = motionTouchEventX
             currentY = motionTouchEventY
             strokeBuilder.addPoint(Ink.Point.create(motionTouchEventX, motionTouchEventY, motionTouchEventT))
             // Draw the path in the extra bitmap to save it.
+            // 저장하기 위해 extra bitmap에 그림을 그립니다
             extraCanvas.drawPath(path, paint)
         }
-        // Invalidate() is inside the touchMove() under ACTION_MOVE because there are many other
-        // types of motion events passed into this listener, and we don't want to invalidate the
-        // view for those.
+        // 이 리스너에 전달되는 다른 종류의 모션 이벤트가 많고, 뷰에서 무효화(invalidate) 하고 싶지 않으므로 
+        // invalidate()는 touchMove()에서 ACTION_MOVE에 있습니다. 
         invalidate()
     }
 
     private fun touchUp() {
-        // Reset the path so it doesn't get drawn again.
+        // 그렸던 패스는 다시 그리지 않도록 리셋합니다.
         strokeBuilder.addPoint(Ink.Point.create(motionTouchEventX, motionTouchEventY, motionTouchEventT))
         inkBuilder.addStroke(strokeBuilder.build())
         path.reset()
