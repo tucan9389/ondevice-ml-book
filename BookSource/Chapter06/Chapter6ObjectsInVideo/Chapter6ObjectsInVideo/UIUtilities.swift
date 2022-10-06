@@ -59,7 +59,7 @@ public class UIUtilities {
     inView.addSubview(lineView)
   }
 
-  public static func addRectangle(_ rectangle: CGRect, to view: view, color: UIColor) {
+  public static func addRectangle(_ rectangle: CGRect, to view: UIView, color: UIColor) {
     guard rectangle.isValid() else { return }
     let rectangleView = UIView(frame: rectangle)
     rectangleView.layer.cornerRadius = Constants.rectangleViewCornerRadius

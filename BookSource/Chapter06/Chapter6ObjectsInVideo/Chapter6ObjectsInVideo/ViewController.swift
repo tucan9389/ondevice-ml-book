@@ -21,12 +21,18 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
     private let session = AVCaptureSession()
     public var previewLayer: AVCaptureVideoPreviewLayer! = nil
     private let videoDataOutput = AVCaptureVideoDataOutput()
-    private var detectionOverlay: CALayer! = nil
     private var options = ObjectDetectorOptions()
     private var objectDetector: MLKitObjectDetection.ObjectDetector
     private let videoDataOutputQueue = DispatchQueue(label: "VideoDataOutput", qos: .userInitiated, attributes: [], autoreleaseFrequency: .workItem)
     var bufferSize: CGSize = .zero
     var rootLayer: CALayer! = nil
+    
+    private lazy var annotationOverlayView: UIView = {
+        precondition(isViewLoaded)
+        let annotationOverlayView = UIView(frame: previewView.frame)
+        annotationOverlayView.translatesAutoresizingMaskIntoConstraints = false
+        return annotationOverlayView
+    }()
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -34,7 +40,6 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
         setupAVCapture()
         // setup Vision parts
         setupLayers()
-        updateLayerGeometry()
         // start the capture
         startCaptureSession()
     }
@@ -81,7 +86,7 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
         // Always process the frames
         captureConnection?.isEnabled = true
         do {
-            try  videoDevice!.lockForConfiguration()
+            try videoDevice!.lockForConfiguration()
             let dimensions = CMVideoFormatDescriptionGetDimensions((videoDevice?.activeFormat.formatDescription)!)
             bufferSize.width = CGFloat(dimensions.width)
             bufferSize.height = CGFloat(dimensions.height)
@@ -114,25 +119,26 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
     func drawMLKitResults(boundingBox: CGRect, imageWidth: CGFloat, imageHeight: CGFloat,  label: String) {
         CATransaction.begin()
         CATransaction.setValue(kCFBooleanTrue, forKey: kCATransactionDisableActions)
-        detectionOverlay.sublayers = nil // remove all the old recognized objects
-        //let shapeLayer = self.createRoundedRectLayerWithBounds(boundingBox, imageWidth: imageWidth, imageHeight: imageHeight)
-        //let textLayer = self.createTextSubLayerInBounds(boundingBox,identifier: label)
-        //shapeLayer.addSublayer(textLayer)
-        //detectionOverlay.addSublayer(shapeLayer)
+        annotationOverlayView.subviews.forEach { $0.removeFromSuperview() }
+        annotationOverlayView.layer.sublayers = nil // remove all the old recognized objects
+
+        let textLayer = createTextSubLayerInBounds(boundingBox, imageWidth: imageWidth, imageHeight: imageHeight, identifier: label)
+        
+        annotationOverlayView.layer.addSublayer(textLayer)
+        textLayer.zPosition = 1
+        
         self.createRoundedRectLayerWithBounds(boundingBox, imageWidth: imageWidth, imageHeight: imageHeight)
-        self.updateLayerGeometry()
         CATransaction.commit()
     }
     
     func clearMLKitResults(){
         CATransaction.begin()
         CATransaction.setValue(kCFBooleanTrue, forKey: kCATransactionDisableActions)
-        detectionOverlay.sublayers = nil // remove all the old recognized objects
-        self.updateLayerGeometry()
+        annotationOverlayView.subviews.forEach { $0.removeFromSuperview() }
+        annotationOverlayView.layer.sublayers = nil // remove all the old recognized objects
         CATransaction.commit()
 
     }
-
     
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         guard let imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else {
@@ -160,56 +166,43 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
         }
     }
     
-    
     func setupLayers() {
-        detectionOverlay = CALayer() // container layer that has all the renderings of the observations
-        detectionOverlay.name = "DetectionOverlay"
-        detectionOverlay.bounds = CGRect(x: 0.0,
-                                         y: 0.0,
-                                         width: bufferSize.width,
-                                         height: bufferSize.height)
-        detectionOverlay.position = CGPoint(x: rootLayer.bounds.midX, y: rootLayer.bounds.midY)
-        rootLayer.addSublayer(detectionOverlay)
+        previewView.addSubview(annotationOverlayView)
+        NSLayoutConstraint.activate([
+            annotationOverlayView.topAnchor.constraint(equalTo: previewView.topAnchor),
+            annotationOverlayView.leadingAnchor.constraint(equalTo: previewView.leadingAnchor),
+            annotationOverlayView.trailingAnchor.constraint(equalTo: previewView.trailingAnchor),
+            annotationOverlayView.bottomAnchor.constraint(equalTo: previewView.bottomAnchor),
+        ])
+        rootLayer.addSublayer(annotationOverlayView.layer)
     }
     
-    func updateLayerGeometry() {
-        let bounds = rootLayer.bounds
-        var scale: CGFloat
+    func createTextSubLayerInBounds(_ bounds: CGRect, imageWidth: CGFloat, imageHeight: CGFloat, identifier: String) -> CATextLayer {
+        let normalizedRect = CGRect(
+            x: bounds.origin.x / imageWidth,
+            y: bounds.origin.y / imageHeight,
+            width: bounds.size.width / imageWidth,
+            height: bounds.size.height / imageHeight
+        )
+        let standardizedRect = previewLayer.layerRectConverted(
+            fromMetadataOutputRect: normalizedRect
+        ).standardized
         
-        let xScale: CGFloat = bounds.size.width / bufferSize.height
-        let yScale: CGFloat = bounds.size.height / bufferSize.width
-        
-        scale = fmax(xScale, yScale)
-        if scale.isInfinite {
-            scale = 1.0
-        }
-        CATransaction.begin()
-        CATransaction.setValue(kCFBooleanTrue, forKey: kCATransactionDisableActions)
-        
-        // rotate the layer into screen orientation and scale and mirror
-        detectionOverlay.setAffineTransform(CGAffineTransform(rotationAngle: CGFloat(.pi / 2.0)).scaledBy(x: scale, y: -scale))
-        // center the layer
-        detectionOverlay.position = CGPoint(x: bounds.midX, y: bounds.midY)
-        
-        CATransaction.commit()
-        
-    }
-    
-    func createTextSubLayerInBounds(_ bounds: CGRect, identifier: String) -> CATextLayer {
         let textLayer = CATextLayer()
         textLayer.name = "Object Label"
-        let formattedString = NSMutableAttributedString(string: String(format: "\(identifier)"))
+        
+        let contents = "Object ID: \(identifier)"
+        let formattedString = NSMutableAttributedString(string: contents)
         let largeFont = UIFont(name: "Helvetica", size: 24.0)!
-        formattedString.addAttributes([NSAttributedString.Key.font: largeFont], range: NSRange(location: 0, length: identifier.count))
+        formattedString.addAttributes([NSAttributedString.Key.font: largeFont], range: NSRange(location: 0, length: contents.count))
         textLayer.string = formattedString
-        textLayer.bounds = CGRect(x: 0, y: 0, width: bounds.size.height - 10, height: bounds.size.width - 10)
-        textLayer.position = CGPoint(x: bounds.midX, y: bounds.midY)
+        textLayer.bounds = CGRect(x: 0, y: 0, width: standardizedRect.size.height - 10, height: standardizedRect.size.width - 10)
+        textLayer.position = CGPoint(x: standardizedRect.midX, y: standardizedRect.midY)
         textLayer.shadowOpacity = 0.7
         textLayer.shadowOffset = CGSize(width: 2, height: 2)
         textLayer.foregroundColor = CGColor(colorSpace: CGColorSpaceCreateDeviceRGB(), components: [0.0, 0.0, 0.0, 1.0])
         textLayer.contentsScale = 2.0 // retina rendering
-        // rotate the layer into screen orientation and scale and mirror
-        textLayer.setAffineTransform(CGAffineTransform(rotationAngle: CGFloat(.pi / 2.0)).scaledBy(x: 1.0, y: -1.0))
+
         return textLayer
     }
     
@@ -223,17 +216,8 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
         let standardizedRect = previewLayer.layerRectConverted(
           fromMetadataOutputRect: normalizedRect
         ).standardized
-        //let shapeLayer = CALayer()
-        //shapeLayer.bounds = standardizedRect
-        //shapeLayer.contentsRect = standardizedRect
-        //shapeLayer.position = CGPoint(x: bounds.midX, y: bounds.midY)
-        //shapeLayer.position = CGPoint(x: bounds.origin.x, y:bounds.origin.y)
-        
-        //shapeLayer.name = "Found Object"
-        //shapeLayer.backgroundColor = CGColor(colorSpace: CGColorSpaceCreateDeviceRGB(), components: [1.0, 1.0, 0.2, 0.4])
-        //shapeLayer.cornerRadius = 7
-        //return shapeLayer
-        UIUtilities.addRectangle(standardizedRect, to: detectionOverlay, color: UIColor.yellow)
+
+        UIUtilities.addRectangle(standardizedRect, to: annotationOverlayView, color: UIColor.yellow)
     }
     
     required init?(coder: NSCoder) {
