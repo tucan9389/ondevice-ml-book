@@ -18,10 +18,10 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         val img: ImageView = findViewById(R.id.imageFace)
-        // assets folder image file name with extension
+        // assets 폴더의 이미지 파일과 확장자
         val fileName = "face-test.jpg"
 
-        // get bitmap from assets folder
+        // assets 폴더에서 비트맵 이미지 가져오기
         val bitmap: Bitmap? = assetsToBitmap(fileName)
         bitmap?.apply{
             img.setImageBitmap(this)
@@ -37,20 +37,20 @@ class MainActivity : AppCompatActivity() {
             val image = InputImage.fromBitmap(bitmap!!, 0)
             val result = detector.process(image)
                 .addOnSuccessListener { faces ->
-                    // Task completed successfully
+                    // 성공적으로 테스크가 끝나면
                     // ...
                     bitmap?.apply{
                         img.setImageBitmap(drawWithRectangle(faces))
                     }
                 }
                 .addOnFailureListener { e ->
-                    // Task failed with an exception
+                    // 테스크가 실패했을 때의 예외처리
                     // ...
                 }
         }
     }
 }
-// helper function to get bitmap from assets
+// assets 폴더에서 비트맵 이미지를 가져오기 위한 핼퍼 함수
 fun Context.assetsToBitmap(fileName: String): Bitmap?{
     return try {
         with(assets.open(fileName)){
@@ -70,7 +70,7 @@ fun Bitmap.drawWithRectangle(faces: List<Face>):Bitmap?{
             style = Paint.Style.STROKE
             strokeWidth = 4.0f
             isAntiAlias = true
-            // draw rectangle on canvas
+            // 캔버스에 사각형 그리기
             canvas.drawRect(
                 bounds,
                 this
