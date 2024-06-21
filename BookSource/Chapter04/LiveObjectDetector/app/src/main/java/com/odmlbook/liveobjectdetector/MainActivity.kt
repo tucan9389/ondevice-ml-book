@@ -41,7 +41,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        // Request camera permissions
+        // 카메라 권한 요청
         if (allPermissionsGranted()) {
             startCamera()
         } else {
@@ -58,9 +58,9 @@ class MainActivity : AppCompatActivity() {
     private fun startCamera() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
         cameraProviderFuture.addListener(Runnable {
-            // Used to bind the lifecycle of cameras to the lifecycle owner
+            // 라이프사이클 소유자에게 카메라 라이프사이클을 바인딩시키는데 사용
             val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
-            // Preview
+            // 프리뷰
             val preview = Preview.Builder()
                 .build()
                 .also {
@@ -74,14 +74,14 @@ class MainActivity : AppCompatActivity() {
                 .also {
                     it.setAnalyzer(cameraExecutor, ObjectAnalyzer(graphicOverlay))
                 }
-            // Select back camera as a default
+            // 디폴트로 후면 카메라 사용
             val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
 
             try {
-                // Unbind use cases before rebinding
+                // 다시 랜더링 하기 전에 언바인딩 시키는 케이스
                 cameraProvider.unbindAll()
 
-                // Bind use cases to camera
+                // 카메라 바인딩 케이스
                 cameraProvider.bindToLifecycle(
                     this, cameraSelector, preview, imageAnalyzer
                 )
